@@ -1,7 +1,8 @@
+use std::option;
 use std::usize;
 
-use crate::raft_rpc::*;
-use crate::state::*;
+use rust_raft::raft_rpc::*;
+use rust_raft::state::*;
 
 #[derive(Debug, Clone)]
 enum Role {
@@ -11,21 +12,43 @@ enum Role {
 }
 
 pub trait AbstractNode {
-    fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet;
-    fn recv_request_vote(&mut self, arg: RequestVoteArg) -> RequestVoteRet;
+    fn convert_to_candidate(&mut self);
 }
 
-struct Node {
+pub trait AbstractOverlayNode {
+    fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet;
+    fn recv_request_vote(&self, arg: RequestVoteArg) -> RequestVoteRet;
+}
+
+pub struct Node<T: AbstractOverlayNode> {
     role: Role,
+    overlay_node: Box<T>,
+}
+
+pub struct OverlayNode {
     state_persistent: StatePersistent,
     state_volatile: StateVolatile,
     state_leader_volatile: Option<StateLeaderVolatile>,
 }
 
-impl Node {
+impl Node<OverlayNode> {
     fn new() -> Self {
         Node {
             role: Role::Follower,
+            overlay_node: Box::new(OverlayNode::new()),
+        }
+    }
+}
+
+impl AbstractNode for Node<OverlayNode> {
+    fn convert_to_candidate(&mut self) {
+        
+    }
+}
+
+impl OverlayNode {
+    fn new() -> Self {
+        OverlayNode {
             state_persistent: StatePersistent {
                 current_term: 0,
                 voted_for: Option::default(),
@@ -63,11 +86,38 @@ impl Node {
         // TODO:
     }
 
-    fn last_log_index(&self) -> LogIndex {
-        self.state_persistent.logs.len() + 1
+    fn last_known_index(&self) -> LogIndex {
+        self.state_persistent.logs.len() + self.state_volatile.last_applied
     }
 
-    pub fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet {
+    fn can_grant_vote(&self, arg: &RequestVoteArg) -> bool {
+        // If votedFor is null or candidateId, and candidate’s log is at least as
+        // up-to-date as receiver’s log, grant vote (§5.2, §5.4)
+        let result = match self.state_persistent.voted_for {
+            None => true,
+            Some(candidate_id) => candidate_id == arg.candidate_id,
+        } && arg.last_log_index >= self.last_known_index();
+        result
+    }
+}
+
+impl AbstractOverlayNode for OverlayNode {
+    fn recv_request_vote(&self, arg: RequestVoteArg) -> RequestVoteRet {
+        // Reply false if term < currentTerm (§5.1)
+        if arg.term < self.state_persistent.current_term || !self.can_grant_vote(&arg) {
+            RequestVoteRet {
+                term: self.state_persistent.current_term,
+                vote_granted: false,
+            }
+        } else {
+            RequestVoteRet {
+                term: self.state_persistent.current_term,
+                vote_granted: true,
+            }
+        }
+    }
+
+    fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet {
         // Reply false if term < currentTerm (§5.1)
         // Reply false if log doesn’t contain an entry at prevLogIndex whose
         // term matches prevLogTerm (§5.3)
@@ -85,21 +135,13 @@ impl Node {
 
             if arg.leader_commit > self.state_volatile.commit_index {
                 self.state_volatile.commit_index =
-                    std::cmp::min(arg.leader_commit, self.last_log_index());
+                    std::cmp::min(arg.leader_commit, self.last_known_index());
             }
 
             AppendEntriesRet {
                 term: self.state_persistent.current_term,
                 success: true,
             }
-        }
-    }
-
-    pub fn recv_request_vote(&mut self, arg: RequestVoteArg) -> RequestVoteRet {
-        // TODO:
-        RequestVoteRet {
-            term: 0,
-            vote_granted: false,
         }
     }
 }
