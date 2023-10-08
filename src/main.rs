@@ -13,6 +13,11 @@ enum Role {
     Candidate,
 }
 
+pub trait AbstractNode {
+    fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet;
+    fn recv_request_vote(&mut self, arg: RequestVoteArg) -> RequestVoteRet;
+}
+
 struct Node {
     role: Role,
     state_persistent: StatePersistent,
