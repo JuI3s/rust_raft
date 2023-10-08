@@ -1,5 +1,5 @@
 mod node;
-use node::AbstractOverlayNode;
+use node::IOverlayNode;
 
 fn main() {
     println!("Hello, world!");

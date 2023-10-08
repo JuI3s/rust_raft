@@ -11,16 +11,16 @@ enum Role {
     Candidate,
 }
 
-pub trait AbstractNode {
+pub trait INode {
     fn convert_to_candidate(&mut self);
 }
 
-pub trait AbstractOverlayNode {
+pub trait IOverlayNode {
     fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet;
     fn recv_request_vote(&self, arg: RequestVoteArg) -> RequestVoteRet;
 }
 
-pub struct Node<T: AbstractOverlayNode> {
+pub struct Node<T: IOverlayNode> {
     role: Role,
     overlay_node: Box<T>,
 }
@@ -40,10 +40,8 @@ impl Node<OverlayNode> {
     }
 }
 
-impl AbstractNode for Node<OverlayNode> {
-    fn convert_to_candidate(&mut self) {
-        
-    }
+impl INode for Node<OverlayNode> {
+    fn convert_to_candidate(&mut self) {}
 }
 
 impl OverlayNode {
@@ -64,13 +62,18 @@ impl OverlayNode {
 
     fn contains_matching_entry(&self, index: LogIndex, term: Term) -> bool {
         // first index is 1
-        let relative_index = index - 1;
-        if relative_index < 0 || relative_index + 1 >= self.state_persistent.logs.len() {
-            false
-        } else if self.state_persistent.logs[index].term < term {
-            false
+        if index == 0 {
+             false
         } else {
-            true
+            let relative_index = index - 1;
+            if relative_index + 1 >= self.state_persistent.logs.len() {
+                false
+            } else if self.state_persistent.logs[index].term < term {
+                false
+            } else {
+                true
+            }
+    
         }
     }
 
@@ -101,7 +104,7 @@ impl OverlayNode {
     }
 }
 
-impl AbstractOverlayNode for OverlayNode {
+impl IOverlayNode for OverlayNode {
     fn recv_request_vote(&self, arg: RequestVoteArg) -> RequestVoteRet {
         // Reply false if term < currentTerm (§5.1)
         if arg.term < self.state_persistent.current_term || !self.can_grant_vote(&arg) {
