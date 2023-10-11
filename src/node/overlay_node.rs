@@ -1,29 +1,6 @@
-use std::option;
-use std::usize;
-
-use rust_raft::raft_rpc::*;
-use rust_raft::state::*;
-
-#[derive(Debug, Clone)]
-enum Role {
-    Follower,
-    Leader,
-    Candidate,
-}
-
-pub trait INode {
-    fn convert_to_candidate(&mut self);
-}
-
-pub trait IOverlayNode {
-    fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet;
-    fn recv_request_vote(&self, arg: RequestVoteArg) -> RequestVoteRet;
-}
-
-pub struct Node<T: IOverlayNode> {
-    role: Role,
-    overlay_node: Box<T>,
-}
+use rust_raft::state::state::*;
+use rust_raft::raft_rpc::raft_rpc::*;
+use crate::node::interface::*;
 
 pub struct OverlayNode {
     state_persistent: StatePersistent,
@@ -31,21 +8,8 @@ pub struct OverlayNode {
     state_leader_volatile: Option<StateLeaderVolatile>,
 }
 
-impl Node<OverlayNode> {
-    fn new() -> Self {
-        Node {
-            role: Role::Follower,
-            overlay_node: Box::new(OverlayNode::new()),
-        }
-    }
-}
-
-impl INode for Node<OverlayNode> {
-    fn convert_to_candidate(&mut self) {}
-}
-
 impl OverlayNode {
-    fn new() -> Self {
+    pub fn new() -> Self {
         OverlayNode {
             state_persistent: StatePersistent {
                 current_term: 0,
@@ -63,7 +27,7 @@ impl OverlayNode {
     fn contains_matching_entry(&self, index: LogIndex, term: Term) -> bool {
         // first index is 1
         if index == 0 {
-             false
+            false
         } else {
             let relative_index = index - 1;
             if relative_index + 1 >= self.state_persistent.logs.len() {
@@ -73,7 +37,6 @@ impl OverlayNode {
             } else {
                 true
             }
-    
         }
     }
 
