@@ -1,5 +1,10 @@
 use crate::state::state::*;
 
+pub enum RpcArg {
+    RequestVoteArg,
+    AppendEntriesArg,
+}
+
 // -------------------------------------------------------
 // AppendEntries RPC
 // Invoked by leader to replicate log entries (§5.3); also used as heartbeat

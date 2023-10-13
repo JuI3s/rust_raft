@@ -64,11 +64,16 @@ impl OverlayNode {
         // Append any new entries not already in the log
         let entries = &arg.entries;
         for (i, _log) in entries.iter().enumerate() {
-            if !self.state_persistent.get_log_at_index(i + arg.prev_log_index).is_none() {
-                self.state_persistent.append_log_entries(entries[i..].to_vec().as_mut());
+            if !self
+                .state_persistent
+                .get_log_at_index(i + arg.prev_log_index)
+                .is_none()
+            {
+                self.state_persistent
+                    .append_log_entries(entries[i..].to_vec().as_mut());
                 break;
             }
-         }
+        }
     }
 
     fn last_known_index(&self) -> LogIndex {
