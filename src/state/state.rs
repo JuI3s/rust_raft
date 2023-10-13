@@ -17,6 +17,7 @@ pub type LogQueue = Vec<LogEntry>;
 // entries. If the follower does not find an entry in its log with the same
 // index and term, then it refuses the new entries. The consistency check acts
 // as an induction step.
+#[derive(Debug, Clone)]
 pub struct LogEntry {
     pub cmd: String,
     pub term: Term,
@@ -46,7 +47,11 @@ impl StatePersistent {
 
     pub fn remove_log_entries_from_idx(&mut self, idx: usize) {
         let final_len = self.logs.len().saturating_sub(idx);
-        self.logs.truncate(final_len);
+        self.logs.truncate(final_len); 
+    }
+
+    pub fn append_log_entries(&mut self, entries: &mut Vec<LogEntry>) {
+        self.logs.append(entries);
     }
 }
 

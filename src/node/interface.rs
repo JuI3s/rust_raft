@@ -12,6 +12,6 @@ pub trait INode {
 }
 
 pub trait IOverlayNode {
-    fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet;
-    fn recv_request_vote(&self, arg: RequestVoteArg) -> RequestVoteRet;
+    fn recv_append_entries(&mut self, arg: &AppendEntriesArg) -> AppendEntriesRet;
+    fn recv_request_vote(&self, arg: &RequestVoteArg) -> RequestVoteRet;
 }

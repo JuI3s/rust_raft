@@ -60,9 +60,15 @@ impl OverlayNode {
         }
     }
 
-    fn maybe_append_new_entries(&mut self, entries: &Vec<LogEntry>) {
+    fn maybe_append_new_entries(&mut self, arg: &AppendEntriesArg) {
         // Append any new entries not already in the log
-        // TODO:
+        let entries = &arg.entries;
+        for (i, _log) in entries.iter().enumerate() {
+            if !self.state_persistent.get_log_at_index(i + arg.prev_log_index).is_none() {
+                self.state_persistent.append_log_entries(entries[i..].to_vec().as_mut());
+                break;
+            }
+         }
     }
 
     fn last_known_index(&self) -> LogIndex {
@@ -86,14 +92,14 @@ impl OverlayNode {
 }
 
 impl IOverlayNode for OverlayNode {
-    fn recv_request_vote(&self, arg: RequestVoteArg) -> RequestVoteRet {
+    fn recv_request_vote(&self, arg: &RequestVoteArg) -> RequestVoteRet {
         RequestVoteRet {
             term: self.state_persistent.current_term,
             vote_granted: self.can_grant_vote(&arg),
         }
     }
 
-    fn recv_append_entries(&mut self, arg: AppendEntriesArg) -> AppendEntriesRet {
+    fn recv_append_entries(&mut self, arg: &AppendEntriesArg) -> AppendEntriesRet {
         // Reply false if term < currentTerm (§5.1)
         // Reply false if log doesn’t contain an entry at prevLogIndex whose
         // term matches prevLogTerm (§5.3)
@@ -106,8 +112,8 @@ impl IOverlayNode for OverlayNode {
                 success: false,
             }
         } else {
-            self.maybe_delete_conflicting_entries(&arg);
-            self.maybe_append_new_entries(&arg.entries);
+            self.maybe_delete_conflicting_entries(arg);
+            self.maybe_append_new_entries(arg);
 
             if arg.leader_commit > self.state_volatile.commit_index {
                 self.state_volatile.commit_index =
