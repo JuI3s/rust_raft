@@ -16,10 +16,7 @@ impl OverlayNode {
                 voted_for: Option::default(),
                 logs: Vec::default(),
             },
-            state_volatile: StateVolatile {
-                commit_index: 0,
-                last_applied: 0,
-            },
+            state_volatile: StateVolatile::new(),
             state_leader_volatile: Option::default(),
         }
     }
@@ -30,9 +27,9 @@ impl OverlayNode {
             false
         } else {
             let relative_index = index - 1;
-            if relative_index + 1 >= self.state_persistent.logs.len() {
-                false
-            } else if self.state_persistent.logs[index].term < term {
+            if relative_index + 1 >= self.state_persistent.logs.len()
+                || self.state_persistent.logs[index].term < term
+            {
                 false
             } else {
                 true
@@ -76,8 +73,13 @@ impl OverlayNode {
         }
     }
 
+    fn last_new_entry_index(&self) -> LogIndex {
+        unimplemented!();
+    }
+
     fn last_known_index(&self) -> LogIndex {
-        self.state_persistent.logs.len() + self.state_volatile.last_applied
+        unimplemented!();
+        // self.state_persistent.logs.len() + self.state_volatile.last_applied
     }
 
     fn can_grant_vote(&self, arg: &RequestVoteArg) -> bool {
@@ -94,9 +96,24 @@ impl OverlayNode {
             result
         }
     }
+
+    fn write_log(&mut self, idx: usize) {
+        unimplemented!();
+    }
 }
 
 impl IOverlayNode for OverlayNode {
+    fn recv_rpc(&mut self, arg: &RpcArg) -> RpcRet {
+        match arg {
+            RpcArg::AppendEntriesArg(append_entries_arg) => {
+                RpcRet::AppendEntriesRet(self.recv_append_entries(append_entries_arg))
+            }
+            RpcArg::RequestVoteArg(request_vote_arg) => {
+                RpcRet::RequestVoteRet(self.recv_request_vote(request_vote_arg))
+            }
+        }
+    }
+
     fn recv_request_vote(&self, arg: &RequestVoteArg) -> RequestVoteRet {
         RequestVoteRet {
             term: self.state_persistent.current_term,
@@ -119,10 +136,14 @@ impl IOverlayNode for OverlayNode {
         } else {
             self.maybe_delete_conflicting_entries(arg);
             self.maybe_append_new_entries(arg);
-
-            if arg.leader_commit > self.state_volatile.commit_index {
-                self.state_volatile.commit_index =
-                    std::cmp::min(arg.leader_commit, self.last_known_index());
+            let write_log = self
+                .state_volatile
+                .maybe_incr_commit_index(arg.leader_commit, self.last_new_entry_index());
+            match write_log {
+                Some(last_applied_index) => {
+                    self.write_log(last_applied_index);
+                }
+                None => {}
             }
 
             AppendEntriesRet {

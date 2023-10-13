@@ -17,15 +17,22 @@ impl Node<OverlayNode> {
 }
 
 impl INode for Node<OverlayNode> {
-    fn convert_to_candidate(&mut self) {}
-}
-
-impl IOverlayNode for Node<OverlayNode> {
-    fn recv_append_entries(&mut self, arg: &AppendEntriesArg) -> AppendEntriesRet {
-        self.overlay_node.recv_append_entries(arg)
+    fn recv_rpc(&mut self, arg: &RpcArg) -> RpcRet {
+        self.overlay_node.recv_rpc(arg)
     }
 
-    fn recv_request_vote(&self, arg: &RequestVoteArg) -> RequestVoteRet {
-        self.overlay_node.recv_request_vote(arg)    
+    fn convert_to_candidate(&mut self) {
+        self.role = Role::Candidate;
+        unimplemented!();
+    }
+
+    fn convert_to_leader(&mut self) {
+        self.role = Role::Leader;
+        unimplemented!();
+    }
+
+    fn convert_to_follower(&mut self) {
+        self.role = Role::Follower;
+        unimplemented!();
     }
 }

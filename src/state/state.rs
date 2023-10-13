@@ -59,10 +59,10 @@ impl StatePersistent {
 pub struct StateVolatile {
     // index of highest log entry known to be committed (initialized to 0,
     // increases monotonically)
-    pub commit_index: LogIndex,
+    commit_index: LogIndex,
     // index of highest log entry applied to state machine (initialized to 0,
     // increases monotonically)
-    pub last_applied: LogIndex,
+    last_applied: LogIndex,
 }
 
 // Volatile state on leaders:
@@ -74,4 +74,39 @@ pub struct StateLeaderVolatile {
     // for each server, index of highest log entry known to be replicated on
     // server (initialized to 0, increases monotonically).
     pub match_indices: Vec<LogIndex>,
+}
+
+impl StateVolatile {
+    pub fn new() -> Self {
+        StateVolatile {
+            commit_index: 0,
+            last_applied: 0,
+        }
+    }
+
+    // Maybe increase the commit index. If commit_index > last_applied, retur
+    // last_applied.
+    pub fn maybe_incr_commit_index(
+        &mut self,
+        leader_commit_index: usize,
+        last_new_entry_index: usize,
+    ) -> Option<usize> {
+        // If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of
+        // last new entry)
+        if leader_commit_index > self.commit_index {
+            self.set_commit_index(std::cmp::min(leader_commit_index, last_new_entry_index))
+        } else {
+            None
+        }
+    }
+
+    fn set_commit_index(&mut self, index: usize) -> Option<usize> {
+        self.commit_index = index;
+        // • If commitIndex > lastApplied: increment lastApplied, apply log[lastApplied]
+        // to state machine (§5.3)
+        if self.commit_index > self.last_applied {
+            return Some(self.last_applied);
+        }
+        None
+    }
 }

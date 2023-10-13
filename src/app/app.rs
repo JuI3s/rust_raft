@@ -1,7 +1,11 @@
 use rust_raft::raft_rpc::raft_rpc::RpcArg;
 use tokio::sync::mpsc;
 
-use crate::node::{node::Node, overlay_node::OverlayNode, interface::IOverlayNode};
+use crate::node::{
+    interface::{INode, IOverlayNode},
+    node::Node,
+    overlay_node::OverlayNode,
+};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -40,22 +44,23 @@ impl App {
         loop {
             tokio::select! {
                 rpc = rx_rpc.recv() => {
-                    match rpc {
-                        None => (),
-                        Some(RpcArg::AppendEntriesArg(arg))  => {
-                            self.local_node.recv_append_entries(arg);
-                        },
-                        Some(RpcArg::RequestVoteArg(arg)) => {
-                            self.local_node.recv_request_vote(arg);
-                        },
-                    }
                     // run another async function to process the result and break out of the loop here
+                    match rpc {
+                        Some(arg) => {
+                            self.local_node.recv_rpc(arg);
+                        },
+                        None => {},
+                    }
                 },
                 _ = heartbeat.tick() => {
                     // Run an async function on every tick while the network call is still in progress.
                     unimplemented!();
                 },
             }
+            // • If commitIndex > lastApplied: increment lastApplied, apply
+            // log[lastApplied] to state machine (§5.3)
+            // • If RPC request or response contains term T > currentTerm: set
+            // currentTerm = T, convert to follower (§5.1)
         }
     }
 

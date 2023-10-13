@@ -5,6 +5,11 @@ pub enum RpcArg {
     AppendEntriesArg(AppendEntriesArg),
 }
 
+pub enum RpcRet {
+    RequestVoteRet(RequestVoteRet),
+    AppendEntriesRet(AppendEntriesRet),
+}
+
 // -------------------------------------------------------
 // AppendEntries RPC
 // Invoked by leader to replicate log entries (§5.3); also used as heartbeat
