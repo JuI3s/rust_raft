@@ -6,7 +6,7 @@ pub struct Node<T: IOverlayNode> {
 }
 
 impl Node<OverlayNode> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Node {
             role: Role::Follower,
             overlay_node: Box::new(OverlayNode::new()),
