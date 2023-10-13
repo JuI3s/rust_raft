@@ -1,6 +1,5 @@
 use rust_raft::raft_rpc::raft_rpc::*;
 
-
 #[derive(Debug, Clone)]
 pub enum Role {
     Follower,
