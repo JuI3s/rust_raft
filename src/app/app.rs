@@ -1,7 +1,7 @@
 use rust_raft::raft_rpc::raft_rpc::RpcArg;
 use tokio::sync::mpsc;
 
-use crate::node::{node::Node, overlay_node::OverlayNode};
+use crate::node::{node::Node, overlay_node::OverlayNode, interface::IOverlayNode};
 
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -26,7 +26,7 @@ impl App {
         unimplemented!();
     }
 
-    pub async fn start(&self) {
+    pub async fn start(&mut self) {
         println!("Raft server started.");
 
         let duration = tokio::time::Duration::from_millis(self.get_heartbeat_duration());
@@ -42,11 +42,11 @@ impl App {
                 rpc = rx_rpc.recv() => {
                     match rpc {
                         None => (),
-                        Some(apendEntriesArg)  => {
-                            unimplemented!();
+                        Some(RpcArg::AppendEntriesArg(arg))  => {
+                            self.local_node.recv_append_entries(arg);
                         },
-                        Some(requestVoteArg) => {
-                            unimplemented!();
+                        Some(RpcArg::RequestVoteArg(arg)) => {
+                            self.local_node.recv_request_vote(arg);
                         },
                     }
                     // run another async function to process the result and break out of the loop here

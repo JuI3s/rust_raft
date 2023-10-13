@@ -1,8 +1,8 @@
 use crate::state::state::*;
 
 pub enum RpcArg {
-    RequestVoteArg,
-    AppendEntriesArg,
+    RequestVoteArg(RequestVoteArg),
+    AppendEntriesArg(AppendEntriesArg),
 }
 
 // -------------------------------------------------------

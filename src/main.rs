@@ -44,6 +44,6 @@ async fn main() {
     let config = Config {
         heartbeat_duration: 300,
     };
-    let app = App::new(config);
+    let mut app = App::new(config);
     app.start();
 }
